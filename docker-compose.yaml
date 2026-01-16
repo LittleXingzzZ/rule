@@ -1,0 +1,43 @@
+services:
+  cli-proxy-api:
+    image: eceasy/cli-proxy-api:latest
+    container_name: cli-proxy-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - TZ=Asia/Shanghai
+      - MANAGEMENT_PASSWORD=    # WebUI 管理密码
+      - MANAGEMENT_STATIC_PATH=/tmp
+      - PGSTORE_LOCAL_PATH=/tmp
+      - PGSTORE_DSN=postgres://cliproxy:123456@postgres:5432/cliproxy?sslmode=disable
+    ports:
+      - "8317:8317"
+    volumes:
+      - ./data:/tmp
+    networks:
+      - cli-proxy-network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: cli-proxy-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=cliproxy
+      - POSTGRES_PASSWORD=123456
+      - POSTGRES_DB=cliproxy
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cliproxy -d cliproxy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cli-proxy-network
+
+networks:
+  cli-proxy-network:
+    driver: bridge
